@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+family=(papa maa rani puja me)
+
+# having exclamation mark prefixed to an array allows us access to indexes 
+for members in "${!family[@]}"
+do
+    # this how we access individual members in array
+    echo "${family[members]}"
+    # this how we access their index position
+    echo "${members#}"
+done    
