@@ -7,7 +7,7 @@ function branch_add_commit {
         # TODO: On successful git clone, cd into the cloned repo
         cd $line
         
-        # TODO: Create ww.metadata file with necessary data
+        # TODO: Create file.sh with necessary data
         cat ../file.sh | sed "s/line/$line/" > file.sh
 
         # TODO: Create a new branch
