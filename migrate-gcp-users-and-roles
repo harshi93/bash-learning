@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+
+#TODO: display usage if number of arguments is less than 4 
+if [  $# -le 3 ] # [includes the script as well]
+	then 
+		display_usage
+		exit 1
+	fi 
+
+#TODO: define variable to store value of source project to move role from
+SOURCE_PROJECT=$1
+
+#TODO: define variable to store value of role to migrate 
+MIGRATE_ROLE=$2
+
+
+#TODO: define variable to store value of target project to move role to
+TARGET_PROJECT=$3
+
+function check_variables_are_defined {
+    #TODO: check if source_project variable has value defined
+    if [ -z "$SOURCE_PROJECT" ];
+    then
+        echo "\$SOURCE_PROJECT is empty"
+        exit 1
+    else
+        echo "\$SOURCE_PROJECT is set"
+    fi
+
+    #TODO: check if target_project variable has value defined
+    if [ -z "$TARGET_PROJECT" ];
+    then
+        echo "\$TARGET_PROJECT is empty"
+        exit 1
+    else
+        echo "\$TARGET_PROJECT is set"
+    fi
+
+    #TODO: check if migrate_role variable has value defined
+    if [ -z "$MIGRATE_ROLE" ];
+    then
+        echo "\$MIGRATE_ROLE is empty"
+        exit 1
+    else
+        echo "\$MIGRATE_ROLE is set"
+    fi
+}
+
+#TODO: check if binaries is available
+function check_if_required_binaries_present {
+    declare -a dependencies
+
+    dependencies=(gcloud jq)
+
+    for deps in "${dependencies[@]}"; do 
+        if command -v $deps > /dev/null 2>&1; then
+            echo "$deps exists"
+        else
+            echo "$deps does not exist, please install $deps and try again"
+            exit 1
+        fi
+    done;    
+}
+#TODO: check if gcp profile is configured
+function check_if_gcp_profile_configured {
+    if [ -d ~/.config ]; 
+        echo "config directory found"
+    then
+        if [ -d ~/.config/gcloud ]; then
+            echo "gcloud directory found"
+            if [ -d ~/.config/gcloud/configurations ]; then
+                echo "configurations directory found"
+                if test -s ~/.config/gcloud/configurations; then
+                    echo "directory has size greater than zero"
+                fi 
+            else 
+                echo "configurations directory not found"
+                exit 1
+            fi
+        else 
+            echo "gcloud directory is missing"
+            exit 1
+        fi
+    else 
+        echo ".config directory not found"
+        exit 1    
+    fi
+}
+
+#TODO: perform necessary sanity checks
+function init {
+    check_variables_are_defined
+    check_if_required_binaries_present
+    check_if_gcp_profile_configured
+}
+
+#TODO: add case block to support execution of user migrate, user remove and do both
+1echo -n "Enter your choice: "
+read CHOICE
+
+case $CHOICE in
+
+    migrate)
+        migrate_user_and_role 2>&1
+        ;;
+
+    remove)
+        remove_user_and_role 2>&1
+        ;;
+
+    both)
+        migrate_user_and_role 2>&1
+
+        if [ $? -eq 0 ]; then
+            remove_user_and_role
+        else 
+            echo "error occurred while migrating, please fix errors and try again"   
+        fi
+        ;;
+
+    *)
+        display_usage
+        ;;
+esac
+
+#TODO: add usage examples
+
+#TODO: add help menu
+function display_usage {
+    echo "This script must be run with super-user privileges." 
+	echo -e "\nUsage: $0 [ migrate | remove | both ] gcp-source-project gcp-role gcp-target-project \n"
+}
+
+#TODO: define function to call migrate user and roles
+function migrate_user_and_role {
+    MIGRATE_USER+=$(gcloud asset search-all-iam-policies --query "policy:roles/$MIGRATE_ROLE" --project=$SOURCE_PROJECT --format=json | jq -r '.[].policy.bindings[].members[]')
+
+    for user in "${MIGRATE_USER[@]}"; do
+        printf "Adding $user to $MIGRATE_ROLE in $TARGET_PROJECT"
+        gcloud projects add-iam-policy-binding $TARGET_PROJECT --member=$user --role=projects/$TARGET_PROJECT/roles/$MIGRATE_ROLE
+        break
+    done;
+}
+
+#TODO: define function to remove user and roles
+function remove_user_and_role {
+    EXISTING_USER=$(gcloud asset search-all-iam-policies --query "policy:roles/$MIGRATE_ROLE" --project=$TARGET_PROJECT --format=json | jq -r '.[].policy.bindings[].members[]')
+
+    for old_proj_user in "${EXISTING_USER[@]}"; do
+        printf "Removing $old_proj_user from $MIGRATE_ROLE in $SOURCE_PROJECT"
+        gcloud projects remove-iam-policy-binding $SOURCE_PROJECT --member=$old_proj_user --role=projects/$SOURCE_PROJECT/roles/$MIGRATE_ROLE
+        break
+    done;
+}
