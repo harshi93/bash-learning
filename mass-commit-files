@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+#TODO: define file name to look for
+FILE=repos-missing-metadata.txt
+
+function branch_add_commit {
+        # TODO: On successful git clone, cd into the cloned repo
+        cd $line
+        
+        # TODO: Create ww.metadata file with necessary data
+        cat ../file.sh | sed "s/line/$line/" > file.sh
+
+        # TODO: Create a new branch
+        git checkout -b add_file
+
+        #TODO: add files to staging 
+        git add file.sh
+
+        #TODO: add files to staging and commit 
+        git commit -m "features addition of file"
+
+        #TODO: push to origin 
+        git push --set-upstream origin add_file
+
+        #TODO: create a pull, add reviewers and assignees
+        gh pr create --title "adds file" --body "Resolves something" --reviewer asingh16 --assignee harshi93
+
+        # TODO: Exit to directory containing shell script and rerun the loop
+        cd ..
+
+        #TODO: Add a sleep of 1 second
+        sleep 1
+}
+
+# TODO: check if input file exists
+if test -f "$FILE"; then
+    echo "$FILE exists."
+else
+    # TODO: if file does not exit throw error
+    echo "$FILE" does not exists
+    exit 1
+fi
+
+# TODO: check if input file has data
+if [ -s "$FILE" ]; then
+    echo "$FILE" has size greater than zero
+else
+    # TODO: if file is empty throw error
+    echo "$FILE" is empty
+    exit 1
+fi
+
+# TODO: read from names of repo from file
+while IFS="" read -r line; 
+do
+    echo "Checking out repo $line";
+    if [ -d "$line" ]; then
+        echo "$line" directory exists
+        
+       branch_add_commit()
+    else 
+        echo "$line" does not exist
+        echo "initiating cloning of $line repository from github"
+
+        # TODO: git clone the repo, if folder does not exist
+        git clone git@github.com:harshi93/$line
+        
+        branch_add_commit()
+        
+        
+    fi    
+done < $FILE
